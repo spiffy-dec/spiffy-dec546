@@ -1,0 +1,56 @@
+name: UptoPlay Autopilot
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 */8 * * *"
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: |
+          npm init -y
+          npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+
+      - name: Install Chrome & Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Continuous Run Loop with Hard Reset
+        run: |
+          while true; do
+            echo "--- NETTOYAGE COMPLET DES PROCESSUS ---"
+            sudo pkill -9 chrome || true
+            sudo pkill -9 google-chrome || true
+            sudo pkill -9 Xvfb || true
+
+            echo "--- MISE À JOUR DES PERMISSIONS ---"
+            sudo chmod -R 777 /dev/shm || true
+
+            echo "--- DÉMARRAGE DU SCRIPT JS ---"
+            timeout 340m xvfb-run \
+              --auto-servernum \
+              --server-args="-screen 0 1280x960x24" \
+              node scrypt58a.js || echo "Cycle terminé ou timeout atteint"
+
+            echo "--- REPOS (30 SECONDES) ---"
+            sleep 30
+          done
